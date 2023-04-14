@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:tx="http://www.springframework.org/schema/tx"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+  http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+  http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+
+  <context:property-placeholder location="classpath:db.properties"/>
+
+  <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+    <property name="driverClassName" value="${db.driverClassName}"/>
+    <property name="url" value="${db.url}"/>
+    <property name="username" value="${db.helloUsername}"/>
+    <property name="password" value="${db.password}"/>
+  </bean>
+
+  <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="dataSource"/>
+  </bean>
+  <!-- 후 처리기(자동 프록시 생성기) 등록 -->
+  <!-- 어드바이저를 자동으로 검색 -->
+  <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+
+  <!-- 어드바이스 등록 -->
+  <bean id="transactionAdvice" class="me.study.proxy.postbean.transaction.TransactionAdvice">
+    <property name="platformTransactionManager" ref="transactionManager"/>
+  </bean>
+
+  <!-- 포인트 컷 등록 -->
+  <bean id="transactionPointcut" class="me.study.proxy.postbean.transaction.NameMatchClassMethodPointcut">
+    <property name="mappedClassName" value="*ServiceImpl"/>
+    <property name="mappedNames" value="insert*,update*,delete*,save*"/>
+  </bean>
+
+  <!-- 어드바이저 등록 (어드바이스 + 포인트 컷) -->
+  <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+    <property name="advice" ref="transactionAdvice"/>
+    <property name="pointcut" ref="transactionPointcut"/>
+  </bean>
+
+  <!-- transaction 적용 -->
+  <tx:annotation-driven transaction-manager="transactionManager"/>
+</beans>
